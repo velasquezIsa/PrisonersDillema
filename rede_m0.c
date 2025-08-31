@@ -3,8 +3,11 @@
 #include <math.h>
 
 //Rede do sistema
-#define L 50  //tamanho de cada lado da rede (quadrada)
+#define L 100  //tamanho de cada lado da rede (quadrada)
 #define N (L * L) //tamanho da rede
+
+//Tempo em MCS
+#define MCS 10000
 
 //Pontos
 #define S 0.0 //C quando encontra D
@@ -57,12 +60,15 @@ float randi() {
 //Função estratégias
 void estrategias(){
     for (int i = 0; i < N; ++i){
-        float ran = randi();
-        if (ran < 0.5){
-            s[i] = 0;
-        } else {
-            s[i] = 1;
+        s[i] = 0;
+    }
+    for (int j = 0; j < (N/2); ++j){
+        int ran;
+        ran = randi() * N;
+        while (s[ran] == 1){
+            ran = randi() * N;
         }
+        s[ran] = 1;
     }
 }
 
@@ -73,39 +79,49 @@ int main() {
     pts_iniciais(); //pontuação incial de todos é 0
     estrategias(); //randomizando as estratégias
 
-    //Interações
-    for (int i = 0; i < N; ++i){
-        if (s[i] == 0) { //se o agente é D
-            for (int j = 0; j < 4; ++j){
-                if (s[vizinhanca[i][j]] == 0){ //se o vizinho é D também
-                    pontos[i] =+ P;
-                    pontos[vizinhanca[i][j]] =+ P;
-                }
-                if (s[vizinhanca[i][j]] == 0){ //se o vizinho é C
-                    pontos[i] =+ T;
-                    pontos[vizinhanca[i][j]] =+ S;
-                }
-            }
-        }
-        if (s[i] == 1){ //se o agente é C
-            for (int j = 0; j < 4; ++j){
-                if (s[vizinhanca[i][j]] == 0){ //se o vizinho é D
-                    pontos[i] =+ S;
-                    pontos[vizinhanca[i][j]] =+ T;
-                }
-                if (s[vizinhanca[i][j]] == 0){ //se o vizinho é C também
-                    pontos[i] =+ R;
-                    pontos[vizinhanca[i][j]] =+ R;
-                }
-            }
+    int soma_C = 0;
+    for (int k = 0; k < N; ++k) {
+        if (s[k] == 1) {
+            soma_C += 1;
         }
     }
+    printf("ro_C/ro em t = 0: %d\n", soma_C);
 
-    //Atualizando as estratégias
-    for (int i = 0; i < N; ++i){
-        for (int j = 0; j < 4; ++j) {
-            if (pontos[i] < pontos[vizinhanca[i][j]]) {
-                s[i] = s[vizinhanca[i][j]];
+    //Interações
+    for (int k = 0; k < MCS; ++k) {
+        for (int i = 0; i < N; ++i){
+            if (s[i] == 0) { //se o agente é D
+                for (int j = 0; j < 4; ++j){
+                    if (s[vizinhanca[i][j]] == 0){ //se o vizinho é D também
+                        pontos[i] =+ P;
+                        pontos[vizinhanca[i][j]] =+ P;
+                    }
+                    if (s[vizinhanca[i][j]] == 0){ //se o vizinho é C
+                        pontos[i] =+ T;
+                        pontos[vizinhanca[i][j]] =+ S;
+                    }
+                }
+            }
+            if (s[i] == 1){ //se o agente é C
+                for (int j = 0; j < 4; ++j){
+                    if (s[vizinhanca[i][j]] == 0){ //se o vizinho é D
+                        pontos[i] =+ S;
+                        pontos[vizinhanca[i][j]] =+ T;
+                    }
+                    if (s[vizinhanca[i][j]] == 0){ //se o vizinho é C também
+                        pontos[i] =+ R;
+                        pontos[vizinhanca[i][j]] =+ R;
+                    }
+                }
+            }
+        }
+
+        //Atualizando as estratégias
+        for (int i = 0; i < N; ++i){
+            for (int j = 0; j < 4; ++j) {
+                if (pontos[i] < pontos[vizinhanca[i][j]]) {
+                    s[i] = s[vizinhanca[i][j]];
+                }
             }
         }
     }
@@ -115,13 +131,19 @@ int main() {
     gp = popen("gnuplot -persist", "w");
     if (gp == NULL) {
         printf("Erro ao abrir o pipe para o Gnuplot.\n");
-        exit(1);}
-    
-    fprintf(gp, "set title 'Gráfico da rede'\n");
+        exit(1);
+    }
+        
+    fprintf(gp, "set encoding utf8\n");
+    fprintf(gp, "set title 'Gráfico da rede m0 ro1 t = %d\n", MCS);
     fprintf(gp, "set palette defined (0 'red', 1 'green')\n");
+    fprintf(gp, "set size square\n");
     fprintf(gp, "set pm3d map\n");
+    fprintf(gp, "unset xtics\n");
+    fprintf(gp, "unset ytics\n");
     fprintf(gp, "unset ztics\n");
-    fprintf(gp, "splot '-' using 1:2:3 with points pt 7 palette\n");
+    fprintf(gp, "unset colorbox\n");
+    fprintf(gp, "splot '-' using 1:2:3 with points pt 5 palette\n");
 
     for (int i = 0; i < N; i++) {
         int cor;
@@ -137,6 +159,13 @@ int main() {
     fprintf(gp, "e\n");
     pclose(gp);
 
-    return 0;
+    soma_C = 0;
+    for (int k = 0; k < N; ++k) {
+        if (s[k] == 1) {
+            soma_C += 1;
+        }
+    }
+    printf("ro_C/ro em t = %d: %d\n", MCS, soma_C);
 
+    return 0;
 }
