@@ -1,13 +1,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include "lat2eps.h"
+
+//Nome do arquivo gerado
+char name[100];
 
 //Rede do sistema
 #define L 100  //tamanho de cada lado da rede (quadrada)
 #define N (L * L) //tamanho da rede
+float rho = 1;
 
 //Tempo em MCS
 #define MCS 10000
+int tempo = 0;
 
 //Pontos
 #define S 0.0 //C quando encontra D
@@ -59,33 +65,62 @@ float randi() {
 
 //Função estratégias
 void estrategias(){
+    float ran;
     for (int i = 0; i < N; ++i){
-        s[i] = 0;
-    }
-    for (int j = 0; j < (N/2); ++j){
-        int ran;
-        ran = randi() * N;
-        while (s[ran] == 1){
-            ran = randi() * N;
+        ran = randi();
+        if (ran < 0.5) {
+            s[i] = 0;
+        } else if (ran >= 0.5) {
+            s[i] = 1;
         }
-        s[ran] = 1;
     }
 }
+
+//Função densidade de C em N
+int densidade(){
+    float soma_C = 0.0;
+    float rho_c = 0.0;
+    for (int k = 0; k < N; ++k) {
+        if (s[k] == 1) {
+            soma_C += 1.0;
+        }
+    }
+    rho_c = soma_C/N;
+    printf("p_c/p em t = %d: %f\n", tempo, rho_c);
+}
+
+//Função PLOT
+void plot_lat(const char *name){
+    lat2eps_init(L,L);
+    lat2eps_set_color(2,0xFFFFFF); // white
+    lat2eps_set_color(1,0x0115b2); // blue
+    lat2eps_set_color(0,0xFF0000); // red
+    for (int j=0; j<N; ++j) {
+        if (s[j] == 1) 
+            lat2eps_set_site(j%L,(L - 1) - (j / L),1);
+        else if (s[j] == 0) 
+            lat2eps_set_site(j%L,(L - 1) - (j / L),0);}
+
+    lat2eps_gen_eps(name,0,0,L,L,2,6);
+    lat2eps_release();
+}
+
+
+
+
+
+
+
 
 //SIMULAÇÃO
 int main() {
     srand(42); //semente para a função rand
-    rede(); //rodando a rede
+    rede(); //montando a rede
     pts_iniciais(); //pontuação incial de todos é 0
     estrategias(); //randomizando as estratégias
-
-    int soma_C = 0;
-    for (int k = 0; k < N; ++k) {
-        if (s[k] == 1) {
-            soma_C += 1;
-        }
-    }
-    printf("ro_C/ro em t = 0: %d\n", soma_C);
+    densidade(); //densidade de C's no início da simulação
+    snprintf(name, sizeof(name), "m0_p1_t%d.eps", tempo);
+    plot_lat(name); //plotando o estado inicial da rede
 
     //Interações
     for (int k = 0; k < MCS; ++k) {
@@ -115,57 +150,31 @@ int main() {
                 }
             }
         }
+    }
 
-        //Atualizando as estratégias
-        for (int i = 0; i < N; ++i){
-            for (int j = 0; j < 4; ++j) {
-                if (pontos[i] < pontos[vizinhanca[i][j]]) {
-                    s[i] = s[vizinhanca[i][j]];
-                }
+    //Atualizando as estratégias
+    int s_novo[N];
+    for (int i = 0; i < N; ++i) {
+        s_novo[i] = s[i];
+    }
+    for (int i = 0; i < N; ++i){
+        int j0 = randi() * 4;
+        for (int j = 0; j < 4; ++j){
+            if (pontos[i] < pontos[vizinhanca[i][j0]]){
+                s_novo[i] = s[vizinhanca[i][j0]];
             }
+            j0 = (j0 + 1) % 4;
         }
     }
-
-    //PLOT
-    FILE *gp;
-    gp = popen("gnuplot -persist", "w");
-    if (gp == NULL) {
-        printf("Erro ao abrir o pipe para o Gnuplot.\n");
-        exit(1);
+    for (int i = 0; i < N; ++i) {
+        s[i] = s_novo[i];
     }
-        
-    fprintf(gp, "set encoding utf8\n");
-    fprintf(gp, "set title 'Gráfico da rede m0 ro1 t = %d\n", MCS);
-    fprintf(gp, "set palette defined (0 'red', 1 'green')\n");
-    fprintf(gp, "set size square\n");
-    fprintf(gp, "set pm3d map\n");
-    fprintf(gp, "unset xtics\n");
-    fprintf(gp, "unset ytics\n");
-    fprintf(gp, "unset ztics\n");
-    fprintf(gp, "unset colorbox\n");
-    fprintf(gp, "splot '-' using 1:2:3 with points pt 5 palette\n");
 
-    for (int i = 0; i < N; i++) {
-        int cor;
-        int x = i % L;
-        int y = i / L;
-        if (s[i] == 0) {
-            cor = 0;
-        } else if (s[i] == 1) {
-            cor = 1;
-        } fprintf(gp, "%d %d %d\n", x, y, cor);
-    }
-    
-    fprintf(gp, "e\n");
-    pclose(gp);
-
-    soma_C = 0;
-    for (int k = 0; k < N; ++k) {
-        if (s[k] == 1) {
-            soma_C += 1;
-        }
-    }
-    printf("ro_C/ro em t = %d: %d\n", MCS, soma_C);
+    //Recolhendo dados no final da simulação
+    tempo = MCS;
+    snprintf(name, sizeof(name), "m0_p1_t%d.eps", tempo);
+    densidade();
+    plot_lat(name);
 
     return 0;
 }
