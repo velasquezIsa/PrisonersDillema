@@ -97,9 +97,9 @@ void plot_lat(const char *name){
     lat2eps_set_color(0,0xFF0000); // red
     for (int j=0; j<N; ++j) {
         if (s[j] == 1) 
-            lat2eps_set_site(j%L,(L - 1) - (j / L),1);
+            lat2eps_set_site(j%L,j/L,1);
         else if (s[j] == 0) 
-            lat2eps_set_site(j%L,(L - 1) - (j / L),0);}
+            lat2eps_set_site(j%L,j/L,0);}
 
     lat2eps_gen_eps(name,0,0,L,L,2,6);
     lat2eps_release();
@@ -131,7 +131,7 @@ int main() {
                         pontos[i] =+ P;
                         pontos[vizinhanca[i][j]] =+ P;
                     }
-                    if (s[vizinhanca[i][j]] == 0){ //se o vizinho é C
+                    if (s[vizinhanca[i][j]] == 1){ //se o vizinho é C
                         pontos[i] =+ T;
                         pontos[vizinhanca[i][j]] =+ S;
                     }
@@ -143,15 +143,13 @@ int main() {
                         pontos[i] =+ S;
                         pontos[vizinhanca[i][j]] =+ T;
                     }
-                    if (s[vizinhanca[i][j]] == 0){ //se o vizinho é C também
+                    if (s[vizinhanca[i][j]] == 1){ //se o vizinho é C também
                         pontos[i] =+ R;
                         pontos[vizinhanca[i][j]] =+ R;
                     }
                 }
             }
         }
-    }
-
     //Atualizando as estratégias
     int s_novo[N];
     for (int i = 0; i < N; ++i) {
@@ -169,6 +167,7 @@ int main() {
     for (int i = 0; i < N; ++i) {
         s[i] = s_novo[i];
     }
+    }
 
     //Recolhendo dados no final da simulação
     tempo = MCS;
@@ -178,3 +177,4 @@ int main() {
 
     return 0;
 }
+
