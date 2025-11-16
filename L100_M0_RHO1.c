@@ -115,7 +115,7 @@ if (SAVE_NET == 1){
 *                                 Simulação                                *
 ***************************************************************************/
 int main() {
-  srand(42); //semente para a função rand
+  srand(time(NULL)); //semente para a função rand
   rede(); //montando a rede
   pts_iniciais(); //pontuação incial de todos é 0
   estrategias(); //randomizando as estratégias
@@ -172,3 +172,4 @@ int main() {
 
   return 0;
 }
+
